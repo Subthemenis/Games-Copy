@@ -1,0 +1,1075 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Games</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0d1117;
+      color: #e6edf3;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: #161b22;
+      border-bottom: 1px solid #30363d;
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    header h1 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    #search {
+      flex: 1;
+      max-width: 300px;
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 6px;
+      color: #e6edf3;
+      padding: 5px 11px;
+      font-size: 0.875rem;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    #search:focus { border-color: #58a6ff; }
+    #search::placeholder { color: #484f58; }
+
+    #request-btn {
+      margin-left: auto;
+      background: #21262d;
+      border: 1px solid #30363d;
+      border-radius: 6px;
+      color: #e6edf3;
+      padding: 5px 12px;
+      font-size: 0.8rem;
+      text-decoration: none;
+      white-space: nowrap;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    #request-btn:hover { background: #30363d; border-color: #58a6ff; color: #58a6ff; }
+
+    /* ── Mode toggle ── */
+    .toggle-wrap {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 0.78rem;
+      color: #8b949e;
+      white-space: nowrap;
+    }
+
+    .toggle-wrap input[type="checkbox"] { display: none; }
+
+    .toggle-track {
+      width: 40px;
+      height: 22px;
+      background: #30363d;
+      border-radius: 11px;
+      position: relative;
+      cursor: pointer;
+      transition: background 0.2s;
+      flex-shrink: 0;
+    }
+    .toggle-track::after {
+      content: '';
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      background: #e6edf3;
+      border-radius: 50%;
+      top: 3px;
+      left: 3px;
+      transition: left 0.2s;
+    }
+    input[type="checkbox"]:checked + .toggle-track { background: #58a6ff; }
+    input[type="checkbox"]:checked + .toggle-track::after { left: 21px; }
+
+    /* ── Embed overlay ── */
+    #embed-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: #000;
+      z-index: 100;
+      flex-direction: column;
+    }
+
+    #embed-bar {
+      background: #161b22;
+      border-bottom: 1px solid #30363d;
+      padding: 8px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+
+    #embed-back {
+      background: #21262d;
+      border: 1px solid #30363d;
+      border-radius: 6px;
+      color: #e6edf3;
+      padding: 4px 12px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    #embed-back:hover { background: #30363d; }
+
+    #embed-title {
+      font-size: 0.9rem;
+      color: #8b949e;
+      flex: 1;
+    }
+
+    #embed-fullscreen {
+      background: #21262d;
+      border: 1px solid #30363d;
+      border-radius: 6px;
+      color: #e6edf3;
+      padding: 4px 10px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      white-space: nowrap;
+    }
+    #embed-fullscreen:hover { background: #30363d; border-color: #58a6ff; color: #58a6ff; }
+    #embed-fullscreen .icon-enter { display: inline; }
+    #embed-fullscreen .icon-exit  { display: none; }
+    #embed-fullscreen.is-fullscreen .icon-enter { display: none; }
+    #embed-fullscreen.is-fullscreen .icon-exit  { display: inline; }
+
+    #embed-frame {
+      flex: 1;
+      border: none;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* ── Game grid ── */
+    #game-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
+      gap: 14px;
+      padding: 20px;
+    }
+
+    #no-results {
+      display: none;
+      padding: 40px 20px;
+      color: #484f58;
+      font-size: 0.9rem;
+      text-align: center;
+    }
+
+    #loading-msg {
+      padding: 40px 20px;
+      color: #484f58;
+      font-size: 0.9rem;
+      text-align: center;
+    }
+
+    #error-msg {
+      display: none;
+      padding: 40px 20px;
+      color: #f85149;
+      font-size: 0.9rem;
+      text-align: center;
+    }
+
+    .game-btn {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 10px;
+      color: #e6edf3;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 22px 14px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      text-align: center;
+      transition: background 0.15s, border-color 0.15s, transform 0.1s;
+      user-select: none;
+      min-height: 115px;
+    }
+    .game-btn:hover {
+      background: #21262d;
+      border-color: #58a6ff;
+      transform: translateY(-2px);
+    }
+    .game-btn:active { transform: translateY(0); }
+    .game-btn .icon { font-size: 2rem; line-height: 1; }
+    .game-btn .label { line-height: 1.3; word-break: break-word; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>&#x1F3AE; Games</h1>
+  <input id="search" type="search" placeholder="Search games…" autocomplete="off" spellcheck="false" />
+  <label class="toggle-wrap">
+    <input type="checkbox" id="mode-toggle" />
+    <span class="toggle-track"></span>
+    <span id="mode-label">Popout</span>
+  </label>
+  <a href="https://forms.gle/onPHoSTYUh9DuxNo8" target="_blank" id="request-btn">&#x2B; Request a Game</a>
+</header>
+
+<!-- Embed overlay -->
+<div id="embed-overlay">
+  <div id="embed-bar">
+    <button id="embed-back">&#x2190; Back</button>
+    <span id="embed-title"></span>
+    <button id="embed-fullscreen" title="Fullscreen">
+      <svg class="icon-enter" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/>
+        <line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>
+      </svg>
+      <svg class="icon-exit" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/>
+        <line x1="10" y1="14" x2="3" y2="21"/><line x1="21" y1="3" x2="14" y2="10"/>
+      </svg>
+      Fullscreen
+    </button>
+  </div>
+  <iframe id="embed-frame" title="Game" allowfullscreen
+    sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-pointer-lock allow-modals"></iframe>
+</div>
+
+<div id="loading-msg">⏳ Loading games list…</div>
+<div id="error-msg"></div>
+<div id="no-results">No games match your search.</div>
+<div id="game-grid"></div>
+
+<script>
+  // ── Emoji icon map: keyword → emoji ──
+  const ICON_MAP = [
+    [/soccer|football|world.?cup|fifa/i,       '⚽'],
+    [/basket/i,                                 '🏀'],
+    [/baseball/i,                               '⚾'],
+    [/bowling/i,                                '🎳'],
+    [/golf/i,                                   '⛳'],
+    [/tennis/i,                                 '🎾'],
+    [/volley/i,                                 '🏐'],
+    [/rugby|gridiron/i,                         '🏈'],
+    [/hockey/i,                                 '🏒'],
+    [/racing|drive|drift|car|road|traffic|speed|rally|nascar/i, '🏎️'],
+    [/bike|moto|cycle/i,                        '🏍️'],
+    [/ski|snow|sled|winter/i,                   '🛷'],
+    [/fish/i,                                   '🎣'],
+    [/cook|food|chef|papa|burger|pizza|sushi|cafe|restaurant/i, '🍕'],
+    [/ice.?cream|freezer|freezeria/i,           '🍦'],
+    [/cookie|clicker|idle|tap|click/i,          '🍪'],
+    [/mine|craft|dig|drill|lumber|timber|wood/i,'⛏️'],
+    [/space|star|galaxy|astro|alien|ufo|rocket/i,'🚀'],
+    [/zombie|dead|undead|survivor|apocalypse/i, '🧟'],
+    [/ninja|samurai|katana/i,                   '⚔️'],
+    [/sword|knight|medieval|warrior|gladiator|battle/i,'⚔️'],
+    [/bow|archer/i,                             '🏹'],
+    [/gun|shoot|bullet|sniper|ammo|roulette/i, '🔫'],
+    [/punch|fight|brawl|boxing|kick/i,          '🥊'],
+    [/puzzle|match|tetris|block|blast/i,        '🧩'],
+    [/chess|board/i,                            '♟️'],
+    [/card|poker|black.?jack|solitaire|uno/i,   '🃏'],
+    [/tower.?def|bloon|plant|defend/i,          '🗼'],
+    [/platformer|run|jump|dash|geometry|wave/i, '🏃'],
+    [/horror|night|five|fnaf|haunted|spook|scary/i,'👻'],
+    [/ink|bendy|dark|shadow/i,                  '🖤'],
+    [/adventure|quest|dungeon|rpg|hero/i,       '🗺️'],
+    [/life|sim|virtual|city|build|empire|tycoon/i,'🏙️'],
+    [/bit|pixel|retro|classic|arcade/i,         '👾'],
+    [/sound|music|drum|beat|audio/i,            '🎵'],
+    [/draw|paint|art|color/i,                   '🎨'],
+    [/ragdoll|physics|bounce/i,                 '💥'],
+    [/escape|stealth|spy/i,                     '🚨'],
+    [/water|ocean|sea|surf|wave/i,              '🌊'],
+    [/fly|bird|wings|plane|air/i,               '✈️'],
+    [/tank|war|army|military|soldier/i,         '🪖'],
+    [/horse|jockey/i,                           '🐎'],
+    [/snake|worm/i,                             '🐍'],
+    [/frog|crossy/i,                            '🐸'],
+    [/cat|kitten|meow/i,                        '🐱'],
+    [/dog|puppy/i,                              '🐶'],
+    [/tomb|mask|ancient|egypt/i,                '🗿'],
+    [/minecraft|eagler/i,                       '⛏️'],
+    [/clover|lucky|garden|farm/i,               '🍀'],
+    [/stickman|stick.?figure/i,                 '🕴️'],
+    [/math|brain|quiz|trivia/i,                 '🧠'],
+    [/piano|guitar|instrument/i,                '🎹'],
+  ];
+
+  function iconFor(name) {
+    for (const [re, emoji] of ICON_MAP) {
+      if (re.test(name)) return emoji;
+    }
+    return '🎮';
+  }
+
+  // Manual overrides for filenames that are all-lowercase with no separators
+  // (impossible to auto-split without a dictionary)
+  const NAME_OVERRIDES = {
+    '10minutestilldawn':        '10 Minutes Till Dawn',
+    '2048':                     '2048',
+    'agariooffline':            'Agar.io',
+    'ageofwar':                 'Age of War',
+    'ageofwar2':                'Age of War 2',
+    'alertthelevel':            'Alert the Level',
+    'amogus':                   'Among Us',
+    'amongus':                  'Among Us',
+    'angrybirds':               'Angry Birds',
+    'angrybirdshowdown':        'Angry Birds Showdown',
+    'angrybirdsshowdown':       'Angry Birds Showdown',
+    'angrybirdspace':           'Angry Birds Space',
+    'angrybirdsspace':          'Angry Birds Space',
+    'antbully':                 'Ant Bully',
+    'apexlegends':              'Apex Legends',
+    'arrowhead':                'Arrow Head',
+    'asteroids':                'Asteroids',
+    'backyardballs':            'Backyard Balls',
+    'badtime':                  'Bad Time Simulator',
+    'basketballstars':          'Basketball Stars',
+    'battleroyale':             'Battle Royale',
+    'beamng':                   'BeamNG Drive',
+    'bejeweled':                'Bejeweled',
+    'bigheadbasketball':        'Big Head Basketball',
+    'blobio':                   'Blob.io',
+    'bloonspopfive':            'Bloons Pop 5',
+    'bloonstd5':                'Bloons TD 5',
+    'bloonstd6':                'Bloons TD 6',
+    'bmxstreets':               'BMX Streets',
+    'boxhead':                  'Box Head',
+    'boxheadzombies':           'Boxhead Zombies',
+    'brawlhalla':               'Brawlhalla',
+    'breakout':                 'Breakout',
+    'bubbleshooter':            'Bubble Shooter',
+    'bulletforce':              'Bullet Force',
+    'burgertime':               'Burger Time',
+    'captainforever':           'Captain Forever',
+    'cardwars':                 'Card Wars',
+    'chess':                    'Chess',
+    'civclicker':               'Civ Clicker',
+    'clashofclans':             'Clash of Clans',
+    'classicsnake':             'Classic Snake',
+    'clickerheroes':            'Clicker Heroes',
+    'colorswitch':              'Color Switch',
+    'combotank':                'Combo Tank',
+    'cookieclicker':            'Cookie Clicker',
+    'countbloocula':            'Count Bloocula',
+    'crossyroad':               'Crossy Road',
+    'cubefield':                'Cube Field',
+    'cuberunner':               'Cube Runner',
+    'curseofdoom':              'Curse of Doom',
+    'cutthebuttons':            'Cut the Buttons',
+    'cutterope':                'Cut the Rope',
+    'darksouls':                'Dark Souls',
+    'deadcells':                'Dead Cells',
+    'deadmaze':                 'Dead Maze',
+    'defendyourcastle':         'Defend Your Castle',
+    'devilmaycare':             'Devil May Care',
+    'diep':                     'Diep.io',
+    'diepbots':                 'Diep Bots',
+    'dinosaurgame':             'Dinosaur Game',
+    'doodle jump':              'Doodle Jump',
+    'doodlejump':               'Doodle Jump',
+    'dropper':                  'Dropper',
+    'dungeonquest':             'Dungeon Quest',
+    'duskwood':                 'Duskwood',
+    'earthwormjim':             'Earthworm Jim',
+    'electricman':              'Electric Man',
+    'electricman2':             'Electric Man 2',
+    'escapefromwilson':         'Escape from Wilson',
+    'escapegame':               'Escape Game',
+    'fancypants':               'Fancy Pants',
+    'fireboy':                  'Fireboy and Watergirl',
+    'fireboyandwatergirl':      'Fireboy and Watergirl',
+    'fisheat':                  'Fish Eat',
+    'fishinggame':              'Fishing Game',
+    'flakboy':                  'Flak Boy',
+    'flappybird':               'Flappy Bird',
+    'floppyfish':               'Floppy Fish',
+    'flyingcopter':             'Flying Copter',
+    'fnafworld':                'FNAF World',
+    'fnaf':                     'Five Nights at Freddy\'s',
+    'fortnite':                 'Fortnite',
+    'freekick':                 'Free Kick',
+    'frogyfrogy':               'Frogy Frogy',
+    'frozenrunner':             'Frozen Runner',
+    'fruitninja':               'Fruit Ninja',
+    'geometrydash':             'Geometry Dash',
+    'ghostrecon':               'Ghost Recon',
+    'gladiator':                'Gladiator',
+    'goldengate':               'Golden Gate',
+    'googledinosaur':           'Google Dinosaur',
+    'gravityguy':               'Gravity Guy',
+    'gridlock':                 'Gridlock',
+    'groundhog':                'Groundhog',
+    'growdefense':              'Grow Defense',
+    'gunblood':                 'Gunblood',
+    'hackybird':                'Hacky Bird',
+    'hallogreen':               'Hallo Green',
+    'happywheels':              'Happy Wheels',
+    'hardestgame':              'World\'s Hardest Game',
+    'hardestgame2':             'World\'s Hardest Game 2',
+    'heartstar':                'Heart Star',
+    'heliattack':               'Heli Attack',
+    'heliattack2':              'Heli Attack 2',
+    'heliattack3':              'Heli Attack 3',
+    'hexgl':                    'HexGL',
+    'hillclimbracing':          'Hill Climb Racing',
+    'hobo':                     'Hobo',
+    'hobo2':                    'Hobo 2',
+    'hobo3':                    'Hobo 3',
+    'hotdog':                   'Hot Dog',
+    'houseofdead':              'House of the Dead',
+    'idleminer':                'Idle Miner',
+    'infinitecraft':            'Infinite Craft',
+    'islandsurvival':           'Island Survival',
+    'jacksmith':                'Jack Smith',
+    'jelly truck':              'Jelly Truck',
+    'jellytruck':               'Jelly Truck',
+    'jetpackjoyride':           'Jetpack Joyride',
+    'jumpking':                 'Jump King',
+    'keepyuppy':                'Keepy Uppy',
+    'killtheking':              'Kill the King',
+    'kingofdefense':            'King of Defense',
+    'kingofthieves':            'King of Thieves',
+    'knifehit':                 'Knife Hit',
+    'laststand':                'Last Stand',
+    'leagueoflegends':          'League of Legends',
+    'lemonadestand':            'Lemonade Stand',
+    'lightracer':               'Light Racer',
+    'linerunner':               'Line Runner',
+    'littlealchemy':            'Little Alchemy',
+    'littlealchemy2':           'Little Alchemy 2',
+    'madnessproject':           'Madness Project Nexus',
+    'marioadvance':             'Mario Advance',
+    'mariokart':                'Mario Kart',
+    'marioworld':               'Super Mario World',
+    'mathgame':                 'Math Game',
+    'mausland':                 'Maus Land',
+    'mazerunner':               'Maze Runner',
+    'mcleodgaming':             'McLeod Gaming',
+    'medievalrampage':          'Medieval Rampage',
+    'mineblocks':               'Mine Blocks',
+    'mineclone':                'Mine Clone',
+    'minecraft':                'Minecraft',
+    'minecraftclassic':         'Minecraft Classic',
+    'minesweeper':              'Minesweeper',
+    'miniputt':                 'Mini Putt',
+    'miniputt3':                'Mini Putt 3',
+    'mirrorsedge':              'Mirror\'s Edge',
+    'monkeymart':               'Monkey Mart',
+    'morphingmonster':          'Morphing Monster',
+    'motox3m':                  'Moto X3M',
+    'motox3m2':                 'Moto X3M 2',
+    'motox3m3':                 'Moto X3M 3',
+    'motox3m4':                 'Moto X3M 4',
+    'motox3mspooky':            'Moto X3M Spooky',
+    'motox3mwinter':            'Moto X3M Winter',
+    'mountainbike':             'Mountain Bike',
+    'mutantfightingcup':        'Mutant Fighting Cup',
+    'neonrider':                'Neon Rider',
+    'nitrokart':                'Nitro Kart',
+    'onetouchsoccer':           'One Touch Soccer',
+    'pacman':                   'Pac-Man',
+    'paintball':                'Paintball',
+    'pandaair':                 'Panda Air',
+    'papamacheria':             'Papa\'s Macheria',
+    'papassandwicheria':        'Papa\'s Sandwicheria',
+    'papastakeria':             'Papa\'s Takeria',
+    'papaswingeria':            'Papa\'s Wingeria',
+    'penaltyshootout':          'Penalty Shootout',
+    'penguindiner':             'Penguin Diner',
+    'penguindiner2':            'Penguin Diner 2',
+    'pianotiles':               'Piano Tiles',
+    'piratebay':                'Pirate Bay',
+    'plantsvszombies':          'Plants vs Zombies',
+    'pokemonshowdown':          'Pokemon Showdown',
+    'pong':                     'Pong',
+    'poolparty':                'Pool Party',
+    'probasketball':            'Pro Basketball',
+    'pubg':                     'PUBG',
+    'raceoflife':               'Race of Life',
+    'ragdollhit':               'Ragdoll Hit',
+    'ragdollavalanche':         'Ragdoll Avalanche',
+    'robotunicorn':             'Robot Unicorn Attack',
+    'rockpaperscissors':        'Rock Paper Scissors',
+    'rollinghero':              'Rolling Hero',
+    'royalguard':               'Royal Guard',
+    'rps':                      'Rock Paper Scissors',
+    'runawayfromhell':          'Run Away from Hell',
+    'scp':                      'SCP',
+    'sheepit':                  'SheepIt',
+    'shellshockers':            'Shell Shockers',
+    'shockwave':                'Shockwave',
+    'shootinggames':            'Shooting Games',
+    'shovelknight':             'Shovel Knight',
+    'slaythespire':             'Slay the Spire',
+    'slime':                    'Slime',
+    'slimeroad':                'Slime Road',
+    'slope':                    'Slope',
+    'slopegame':                'Slope',
+    'snakeio':                  'Snake.io',
+    'solitaire':                'Solitaire',
+    'spaceinvaders':            'Space Invaders',
+    'spongebob':                'SpongeBob',
+    'stickmanfighter':          'Stickman Fighter',
+    'stickwar':                 'Stick War',
+    'stickwar2':                'Stick War 2',
+    'stickwarlegacy':           'Stick War Legacy',
+    'streetfighter':            'Street Fighter',
+    'stunts':                   'Stunts',
+    'subwaysurfers':            'Subway Surfers',
+    'suika':                    'Suika Game',
+    'suikagame':                'Suika Game',
+    'supermario':               'Super Mario',
+    'supermario64':             'Super Mario 64',
+    'supermariobros':           'Super Mario Bros',
+    'supermariounlimited':      'Super Mario Unlimited',
+    'swordfight':               'Sword Fight',
+    'tanktrouble':              'Tank Trouble',
+    'tanktrouble2':             'Tank Trouble 2',
+    'templerun':                'Temple Run',
+    'terraria':                 'Terraria',
+    'tetris':                   'Tetris',
+    'thefinalearth':            'The Final Earth',
+    'thefinalearth2':           'The Final Earth 2',
+    'towerdefense':             'Tower Defense',
+    'tugjump':                  'Tug Jump',
+    'tubejumpers':              'Tube Jumpers',
+    'typeracer':                'Type Racer',
+    'undertale':                'Undertale',
+    'unrealflash':              'Unreal Flash',
+    'unrealflash2007':          'Unreal Flash 2007',
+    'vectorrunner':             'Vector Runner',
+    'vex':                      'Vex',
+    'vex3':                     'Vex 3',
+    'vex4':                     'Vex 4',
+    'vex5':                     'Vex 5',
+    'vex6':                     'Vex 6',
+    'vex7':                     'Vex 7',
+    'warbrokers':               'War Brokers',
+    'warlords':                 'Warlords',
+    'webcraft':                 'Web Craft',
+    'whatthecar':               'What the Car',
+    'wheredago':                'Where Da Go',
+    'whiteguyworld':            'White Guy World',
+    'wordmaster':               'Word Master',
+    'worldshardestgame':        'World\'s Hardest Game',
+    'worldshardestgame2':       'World\'s Hardest Game 2',
+    'wrestle':                  'Wrestle',
+    'wubbzy':                   'Wubbzy',
+    'xshooter':                 'X Shooter',
+    'zombie':                   'Zombie',
+    'zombiederby':              'Zombie Derby',
+    'zombiehighway':            'Zombie Highway',
+    'zombienight':              'Zombie Night',
+    'zombieshooter':            'Zombie Shooter',
+    'zombiesurvival':           'Zombie Survival',
+    'zombietycoon':             'Zombie Tycoon',
+    'tombofthemask':            'Tomb of the Mask',
+    '8ballclassic':             '8 Ball Classic',
+    '8ball':                    '8 Ball',
+    '8ballpool':                '8 Ball Pool',
+    '3dflightsimulator':        '3D Flight Simulator',
+    '3dflight':                 '3D Flight Simulator',
+    'cuttherope':               'Cut the Rope',
+    'cuttherope2':              'Cut the Rope 2',
+    'basketbros':               'Basket Bros',
+    'basketrandom':             'Basket Random',
+    'dreadheadparkour':         'Dread Head Parkour',
+    'driftboss':                'Drift Boss',
+    'drivemad':                 'Drive Mad',
+    'ducklife':                 'Duck Life',
+    'ducklife2':                'Duck Life 2',
+    'ducklife3':                'Duck Life 3',
+    'ducklife4':                'Duck Life 4',
+    'ducklife5':                'Duck Life 5',
+    'ducklingsio':              'Ducklings.io',
+    '1v1lol':                   '1v1.lol',
+    '1v1':                      '1v1.lol',
+    'soloagario':               'Solo Agar.io',
+    'soloagар':                 'Solo Agar.io',
+    'awesometanks':             'Awesome Tanks',
+    'awesometanks2':            'Awesome Tanks 2',
+    'baconmaydie':              'Bacon May Die',
+    'agesofconflict':           'Ages of Conflict',
+    'badicecream':              'Bad Ice Cream',
+    'badicecream2':             'Bad Ice Cream 2',
+    'badicecream3':             'Bad Ice Cream 3',
+    'badparenting':             'Bad Parenting',
+    'badpiggies':               'Bad Piggies',
+    'baldisbasics':             "Baldi's Basics",
+    'baseballbros':             'Baseball Bros',
+    'basketballlegends':        'Basketball Legends',
+    'bitlife':                  'BitLife',
+    'bitplanes':                'Bit Planes',
+    'blockysnakes':             'Blocky Snakes',
+    'blumbiracers':             'Blumgi Racers',
+    'blumbirocket':             'Blumgi Rocket',
+    'blumgiracers':             'Blumgi Racers',
+    'blumgirocket':             'Blumgi Rocket',
+    'blumbgiracers':            'Blumgi Racers',
+    'blumbgirocket':            'Blumgi Rocket',
+    'blumgislime':              'Blumgi Slime',
+    'blumgislimefactory':       'Blumgi Slime Factory',
+    'bobtherobber':             'Bob the Robber',
+    'bobtherobber2':            'Bob the Robber 2',
+    'bobtherobber5':            'Bob the Robber 5',
+    'bouncymotors':             'Bouncy Motors',
+    'bowmasters':               'Bowmasters',
+    'boxingrandom':             'Boxing Random',
+    'breakingthebank':          'Breaking the Bank',
+    'candycrush':               'Candy Crush',
+    'capybaraclicker':          'Capybara Clicker',
+    'cardrawing':               'Car Drawing',
+    'carkingarena':             'Race Survival',
+    'choppyorc':                'Choppy Orc',
+    'clashofvikings':           'Clash of Vikings',
+    'cleanupio':                'Clean Up.io',
+    'clusterrush':              'Cluster Rush',
+    'crazycars':                'Crazy Cars',
+    'crazycattle3d':            'Crazy Cattle 3D',
+    'crazycrashlanding':        'Crazy Crash Landing',
+    'crazymotorcycle':          'Crazy Motorcycle',
+    'deathchase':               'Death Chase',
+    'deathrun3d':               'Death Run 3D',
+    'demolitionderbycrash':     'Demolition Derby Crash Racing',
+    'demolitionderbycrashing':  'Demolition Derby Crash Racing',
+    'demolitionderbycrashracing': 'Demolition Derby Crash Racing',
+    'drawclimber':              'Draw Climber',
+    'eagleride':                'Eagle Ride',
+    'earntodie':                'Earn to Die',
+    'earntodie2':               'Earn to Die 2',
+    'eggycar':                  'Eggy Car',
+    'elasticface':              'Elastic Face',
+    'escaperoad':               'Escape Road',
+    'escaperoad2':              'Escape Road 2',
+    'escapingtheprison':        'Escaping the Prison',
+    'evilglitch':               'Evil Glitch',
+    'fancypantsadventure':      'Fancy Pants Adventure',
+    'fancypantsadventure2':     'Fancy Pants Adventure 2',
+    'fireboyandwatergirl2':     'Fireboy and Watergirl 2',
+    'fireboyandwatergirl3':     'Fireboy and Watergirl 3',
+    'fireboyandwatergirl4':     'Fireboy and Watergirl 4',
+    'floodrunner2':             'Flood Runner 2',
+    'floodrunner3':             'Flood Runner 3',
+    'floodrunner4':             'Flood Runner 4',
+    'flooderrunner4':           'Flood Runner 4',
+    'fnaf':                     "Five Nights at Freddy's",
+    'fnaf2':                    "Five Nights at Freddy's 2",
+    'fnaf3':                    "Five Nights at Freddy's 3",
+    'fnaf4':                    "Five Nights at Freddy's 4",
+    'footballbros':             'Football Bros',
+    'footballlegends':          'Football Legends',
+    'freerider3':               'Free Rider 3',
+    'funnybattle':              'Funny Battle',
+    'funnybattle2':             'Funny Battle 2',
+    'funnymadracing':           'Funny Mad Racing',
+    'funnyshooter2':            'Funny Shooter 2',
+    'geometrydashlite':         'Geometry Dash Lite',
+    'geometryvibes':            'Geometry Vibes',
+    'getawayshootout':          'Getaway Shootout',
+    'getontop':                 'Get on Top',
+    'googlebaseball':           'Google Baseball',
+    'googledino':               'Google Dino',
+    'guesstheiranswer':         'Guess Their Answer',
+    'helixjump':                'Helix Jump',
+    'highwaytraffic':           'Highway Traffic',
+    'hillclimbbacinglite':      'Hill Climb Racing Lite',
+    'hillclimbracinglite':      'Hill Climb Racing Lite',
+    'holeio':                   'Hole.io',
+    'houseofhazards':           'House of Hazards',
+    'hoverracerdrive':          'Hover Racer Drive',
+    'idlebreakout':             'Idle Breakout',
+    'minecraftindev':           'Minecraft Indev',
+    'ironsnout':                'Iron Snout',
+    'johnnytrigger':            'Johnny Trigger',
+    'jumpingshell':             'Jumping Shell',
+    'karatebros':               'Karate Bros',
+    'kartbros':                 'Kart Bros',
+    'learntofly':               'Learn to Fly',
+    'learntofly2':              'Learn to Fly 2',
+    'learntofly3':              'Learn to Fly 3',
+    'learntoflyidle':           'Learn to Fly Idle',
+    'leveldevil':               'Level Devil',
+    'madalinstuntcars2':        'Madalin Stunt Cars 2',
+    'melonplayground':          'Melon Playground',
+    'mergeroundracers':         'Merge Round Racers',
+    'monstertracks':            'Monster Tracks',
+    'motox3mpoolparty':         'Moto X3M Pool Party',
+    'motox3mspookyland':        'Moto X3M Spooky Land',
+    'noobminer':                'Noob Miner',
+    'oppositeday':              'Opposite Day',
+    'ovo':                      'OvO',
+    'ovo2':                     'OvO 2',
+    'ovo3dimensions':           'OvO 3 Dimensions',
+    'ovodimensions':            'OvO 3 Dimensions',
+    'papasbakeria':             "Papa's Bakeria",
+    'papasburgeria':            "Papa's Burgeria",
+    'papascheeseria':           "Papa's Cheeseria",
+    'papascupcakeria':          "Papa's Cupcakeria",
+    'papasdonuteria':           "Papa's Donuteria",
+    'papasfreezeria':           "Papa's Freezeria",
+    'papashotdoggeria':         "Papa's Hot Doggeria",
+    'papaspancakeria':          "Papa's Pancakeria",
+    'papaspastaria':            "Papa's Pastaria",
+    'papaspizzeria':            "Papa's Pizzeria",
+    'papasscooperia':           "Papa's Scooperia",
+    'papassushiria':            "Papa's Sushiria",
+    'paperio2':                 'Paper.io 2',
+    'papastacomia':             "Papa's Tacomia",
+    'papaswingeria':            "Papa's Wingeria",
+    'parkingfury':              'Parking Fury',
+    'parkingfury2':             'Parking Fury 2',
+    'parkingfury3':             'Parking Fury 3',
+    'picosschool':              "Pico's School",
+    'pingpongchaos':            'Ping Pong Chaos',
+    'pixelspeedrun':            'Pixel Speedrun',
+    'polytrack':                'Poly Track',
+    'poorbunny':                'Poor Bunny',
+    'ragdollarchers':           'Ragdoll Archers',
+    'ragdollsoccer':            'Ragdoll Soccer',
+    'retrobowl':                'Retro Bowl',
+    'retrobowlcollege':         'Retro Bowl College',
+    'retrohighway':             'Retro Highway',
+    'retropingpong':            'Retro Ping Pong',
+    'riddleschool':             'Riddle School',
+    'riddleschool2':            'Riddle School 2',
+    'riddleschool3':            'Riddle School 3',
+    'riddleschool4':            'Riddle School 4',
+    'riddleschool5':            'Riddle School 5',
+    'riddletransfer':           'Riddle Transfer',
+    'riddletransfer2':          'Riddle Transfer 2',
+    'rocketsoccerderby':        'Rocket Soccer Derby',
+    'rooftopsnipers':           'Rooftop Snipers',
+    'rooftopsnipers2':          'Rooftop Snipers 2',
+    'shortlife':                'Short Life',
+    'slowroads':                'Slow Roads',
+    'sm63':                     'Super Mario 63',
+    'sm64':                     'Super Mario 64',
+    'snowballio':               'Snowball.io',
+    'snowrider':                'Snow Rider',
+    'snowroad':                 'Snow Road',
+    'soccerbros':               'Soccer Bros',
+    'soccerrandom':             'Soccer Random',
+    'spacebarclicker':          'Spacebar Clicker',
+    'spaceiskey':               'Space is Key',
+    'spaceiskey2':              'Space is Key 2',
+    'spacewaves':               'Space Waves',
+    'speedstars':               'Speed Stars',
+    'stateio':                  'State.io',
+    'stickarchers battle':      'Stick Archers Battle',
+    'stickarcharsbattle':       'Stick Archers Battle',
+    'stickarhersbattle':        'Stick Archers Battle',
+    'stickarchersbattle':       'Stick Archers Battle',
+    'stickfighter':             'Stick Fighter',
+    'stickmanhook':             'Stickman Hook',
+    'stickmerge':               'Stick Merge',
+    'subwaysurfersbeijing':     'Subway Surfers Beijing',
+    'subwaysurfershavana':      'Subway Surfers Havana',
+    'subwaysurferssanfrancisco':'Subway Surfers San Francisco',
+    'superbikethechampion':     'Super Bike the Champion',
+    'superhot':                 'Super Hot',
+    'superliquidsoccer':        'Super Liquid Soccer',
+    'superstarcar':             'Superstar Car',
+    'tabletennisworldtour':     'Table Tennis World Tour',
+    'taproad':                  'Tap Road',
+    'templeofboom':             'Temple of Boom',
+    'templerun2':               'Temple Run 2',
+    'territorialio':            'Territorial.io',
+    'theimpossiblequiz':        'The Impossible Quiz',
+    'theimpossiblequiz2':       'The Impossible Quiz 2',
+    'thereisnogame':            'There is No Game',
+    'thereisnog':               'There is No Game',
+    'eaglercraft':              'Minecraft (EaglerCraft)',
+    'theyarecoming':            'They are Coming',
+    'thisisonlylevel':          'This is the Only Level',
+    'thisistheonlylevel':       'This is the Only Level',
+    'thisistheonlyleveltoo':    'This is the Only Level Too',
+    'timeshooter2':             'Time Shooter 2',
+    'timeshooter3':             'Time Shooter 3',
+    'tinyfishing':              'Tiny Fishing',
+    'trapthecat':               'Trap the Cat',
+    'triviacrack':              'Trivia Crack',
+    'tunnelrush':               'Tunnel Rush',
+    'unicyclehero':             'Unicycle Hero',
+    'vexx3m':                   'Vex X3M',
+    'vexx3m2':                  'Vex X3M 2',
+    'volleyrandom':             'Volley Random',
+    'waroftheknights':          'War of the Knights',
+    'wartheknights':            'War of the Knights',
+    'webecomewhatwebehold':     'We Become What We Behold',
+    'wheeliebike':              'Wheelie Bike',
+    'wordleunlimited':          'Wordle Unlimited',
+    'worldshardestgame3':       "World's Hardest Game 3",
+    'wrestlebros':              'Wrestle Bros',
+    'zombierush':               'Zombie Rush',
+    'asmallworldcup':           'A Small World Cup',
+    'bankrobbery':              'Bank Robbery',
+    'bankrobbery2':             'Bank Robbery 2',
+    'bendyandtheinkmachineallchapters': 'Bendy and the Ink Machine',
+    'blockblast':               'Block Blast',
+    'brawlsimulator3d':         'Brawl Simulator 3D',
+    'brotato':                  'Brotato',
+    'buckshotroulette':         'Buckshot Roulette',
+    'cloverpit':                'Clover Pit',
+    'epsteinclicker':           'Epstein Clicker',
+    'escaperoad3':              'Escape Road 3',
+    'escaperoadcity2':          'Escape Road City 2',
+    'fivenightsatepsteins':     "Five Nights at Epstein's",
+    'geometrydash':             'Geometry Dash',
+    'gettingoverit':            'Getting Over It',
+    'idlelumberinc':            'Idle Lumber Inc',
+    'orangeroulette':           'Orange Roulette',
+    'soundboard':               'Soundboard',
+    'survivorio':               'Survivor.io',
+    'thatsnotmyneighbor':       "That's Not My Neighbor",
+  };
+
+  // Convert filenames like "bloonsTD5", "superMario64", "fnaf_world" → readable names
+  function prettify(filename) {
+    let name = filename.replace(/\.html?$/i, '');
+
+    // Check override map first (handles all-lowercase compound names)
+    const key = name.toLowerCase().replace(/[_\-\s\.]+/g, '');
+    if (NAME_OVERRIDES[key]) return NAME_OVERRIDES[key];
+    if (NAME_OVERRIDES[name.toLowerCase()]) return NAME_OVERRIDES[name.toLowerCase()];
+
+    // No override found — log so missing names are easy to spot
+    console.warn(`[Games] No override for: "${filename}" (key: "${key}")`);
+    // Replace underscores/hyphens with spaces
+    name = name.replace(/[_\-]+/g, ' ');
+
+    // Split on camelCase and PascalCase boundaries:
+    // "bloonsTD5"   → "bloons TD 5"
+    // "superMario"  → "super Mario"
+    // "HTMLGame"    → "HTML Game"
+    name = name
+      // lowercase followed by uppercase: "nsTD" → "ns TD"
+      .replace(/([a-z])([A-Z])/g, '$1 $2')
+      // sequence of uppercase followed by uppercase+lowercase: "TDGame" → "TD Game"
+      .replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2')
+      // letter followed by digit: "Mario64" → "Mario 64"
+      .replace(/([A-Za-z])(\d)/g, '$1 $2')
+      // digit followed by letter: "64Super" → "64 Super"
+      .replace(/(\d)([A-Za-z])/g, '$1 $2')
+      // collapse multiple spaces
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    // Title-case each word
+    return name.replace(/\b\w/g, c => c.toUpperCase());
+  }
+
+  const REPOS = [
+    {
+      api:    'https://api.github.com/repos/Subthemenis/Games/contents/Games',
+      raw:    'https://raw.githubusercontent.com/Subthemenis/Games/main/Games/',
+    },
+  ];
+
+  const grid       = document.getElementById('game-grid');
+  const loadingMsg = document.getElementById('loading-msg');
+  const errorMsg   = document.getElementById('error-msg');
+  const noResults  = document.getElementById('no-results');
+  const searchBox  = document.getElementById('search');
+  const modeToggle = document.getElementById('mode-toggle');
+  const modeLabel  = document.getElementById('mode-label');
+  const embedOverlay = document.getElementById('embed-overlay');
+  const embedFrame   = document.getElementById('embed-frame');
+  const embedTitle   = document.getElementById('embed-title');
+  const fsBtn        = document.getElementById('embed-fullscreen');
+
+  // ── Load game list from both repos ──
+  async function loadGames() {
+    try {
+      // Fetch both repos in parallel
+      const results = await Promise.allSettled(
+        REPOS.map(repo =>
+          fetch(repo.api, { headers: { 'Accept': 'application/vnd.github+json' } })
+            .then(r => r.ok ? r.json() : Promise.reject(`API ${r.status}`))
+            .then(data => data
+              .filter(f => f.type === 'file' && /\.html?$/i.test(f.name))
+              .map(f => ({ file: f.name, raw: repo.raw + encodeURIComponent(f.name) }))
+            )
+        )
+      );
+
+      // Merge, deduplicate by filename (case-insensitive), sort alphabetically
+      const seen = new Set();
+      const allFiles = [];
+      for (const result of results) {
+        if (result.status === 'fulfilled') {
+          for (const entry of result.value) {
+            const key = entry.file.toLowerCase();
+            if (!seen.has(key)) {
+              seen.add(key);
+              allFiles.push(entry);
+            }
+          }
+        }
+      }
+
+      // Blacklist
+      const BLACKLIST = new Set(['sandgame.html', '1.12.html', '1.5.html', '1.8.html', 'alpha 1.2.6.html', 'alpha1.2.6.html', 'beta 1.3.html', 'beta1.3.html', 'indev.html']);
+      const files = allFiles
+        .filter(e => !BLACKLIST.has(e.file.toLowerCase()))
+        .sort((a, b) => a.file.localeCompare(b.file, undefined, { sensitivity: 'base' }));
+
+      if (!files.length) throw new Error('No HTML files found in either repo');
+
+      loadingMsg.style.display = 'none';
+
+      for (const { file, raw } of files) {
+        const name = prettify(file);
+        const btn  = document.createElement('button');
+        btn.className = 'game-btn';
+        btn.dataset.url  = raw;
+        btn.dataset.name = name;
+        btn.innerHTML = `<span class="icon">${iconFor(name)}</span><span class="label">${name}</span>`;
+        grid.appendChild(btn);
+      }
+    } catch (err) {
+      loadingMsg.style.display = 'none';
+      errorMsg.style.display   = 'block';
+      errorMsg.textContent     = `Failed to load games list: ${err.message}. Make sure you have internet access.`;
+    }
+  }
+
+  loadGames();
+
+  // ── Mode toggle ──
+  modeToggle.addEventListener('change', () => {
+    modeLabel.textContent = modeToggle.checked ? 'Embed' : 'Popout';
+  });
+
+  // ── Back button ──
+  document.getElementById('embed-back').addEventListener('click', () => {
+    exitFullscreen();
+    embedOverlay.style.display = 'none';
+    embedFrame.src = 'about:blank';
+  });
+
+  // ── Fullscreen ──
+  function enterFullscreen() {
+    const el = embedOverlay;
+    const req = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen;
+    if (req) req.call(el);
+  }
+  function exitFullscreen() {
+    const exit = document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen || document.msExitFullscreen;
+    if (exit && document.fullscreenElement) exit.call(document);
+  }
+
+  fsBtn.addEventListener('click', () => {
+    document.fullscreenElement ? exitFullscreen() : enterFullscreen();
+  });
+
+  document.addEventListener('fullscreenchange', () => {
+    if (document.fullscreenElement) {
+      fsBtn.classList.add('is-fullscreen');
+      fsBtn.title = 'Exit Fullscreen';
+      fsBtn.lastChild.textContent = ' Exit';
+    } else {
+      fsBtn.classList.remove('is-fullscreen');
+      fsBtn.title = 'Fullscreen';
+      fsBtn.lastChild.textContent = ' Fullscreen';
+    }
+  });
+
+  // ── Game click handler ──
+  // Strategy: fetch raw HTML text, then document.write() into a fresh blank
+  // tab or iframe. This gives Ruffle/Unity/WebGL a completely clean JS context
+  // with zero scripts from our launcher page — fixing the "conflicts with Ruffle"
+  // error. raw.githubusercontent.com serves text/plain so we can't navigate
+  // there directly; document.write() bypasses the MIME issue entirely.
+  async function openGame(rawUrl, name) {
+    const embedMode = modeToggle.checked;
+
+    // Show loading state
+    let loadingTarget = null;
+    if (embedMode) {
+      embedTitle.textContent = name + ' — loading…';
+      embedOverlay.style.display = 'flex';
+      embedFrame.srcdoc = '<body style="background:#0d1117;color:#8b949e;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;font-size:1rem">Loading…</body>';
+    } else {
+      loadingTarget = window.open('about:blank', '_blank');
+      if (loadingTarget) {
+        loadingTarget.document.write('<html><body style="background:#0d1117;color:#8b949e;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;font-size:1rem">Loading…</body></html>');
+        loadingTarget.document.close();
+      }
+    }
+
+    try {
+      const res = await fetch(rawUrl);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const html = await res.text();
+
+      if (embedMode) {
+        // srcdoc gives a clean origin — Ruffle's workers resolve correctly
+        embedTitle.textContent = name;
+        embedFrame.srcdoc = html;
+      } else {
+        if (!loadingTarget || loadingTarget.closed) throw new Error('Popup was blocked');
+        // document.write into the already-open blank tab — clean JS context
+        loadingTarget.document.open();
+        loadingTarget.document.write(html);
+        loadingTarget.document.close();
+      }
+    } catch (err) {
+      const errHtml = `<body style="background:#0d1117;color:#f85149;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;flex-direction:column;gap:12px">
+        <div style="font-size:1.2rem">Failed to load "${name}"</div>
+        <div style="font-size:0.85rem;color:#8b949e">${err.message}</div>
+      </body>`;
+      if (embedMode) {
+        embedFrame.srcdoc = errHtml;
+      } else if (loadingTarget && !loadingTarget.closed) {
+        loadingTarget.document.open();
+        loadingTarget.document.write(errHtml);
+        loadingTarget.document.close();
+      }
+    }
+  }
+
+  grid.addEventListener('click', e => {
+    const btn = e.target.closest('.game-btn');
+    if (!btn) return;
+    openGame(btn.dataset.url, btn.dataset.name);
+  });
+
+  // ── Search ──
+  searchBox.addEventListener('input', function () {
+    const query = this.value.trim().toLowerCase();
+    const buttons = grid.querySelectorAll('.game-btn');
+    let visible = 0;
+    buttons.forEach(btn => {
+      const match = btn.dataset.name.toLowerCase().includes(query);
+      btn.style.display = match ? '' : 'none';
+      if (match) visible++;
+    });
+    noResults.style.display = (visible === 0 && buttons.length > 0) ? 'block' : 'none';
+  });
+</script>
+</body>
+</html>
